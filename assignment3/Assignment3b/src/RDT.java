@@ -295,8 +295,11 @@ class RDTBuffer {
 		try 
 		{
 			//to ensure only one thread is accessing the buffer at a time
-			semMutex.acquire(); // wait for mutex 
-				compareNum = buf[seg.seqNum%size].seqNum;
+			semMutex.acquire(); // wait for mutex
+				if (buf[seg.seqNum%size] != null)
+					compareNum = buf[seg.seqNum%size].seqNum;
+				else
+					compareNum = -1;
 			semMutex.release();			
 		} 
 		catch(InterruptedException e) 
@@ -304,7 +307,7 @@ class RDTBuffer {
 			System.out.println("Buffer putSeqNum(): " + e);
 		}
 		
-		return(seg.seqNum == compareNum);
+		return(seg.seqNum == compareNum || compareNum == -1);
 
 	}
 	
