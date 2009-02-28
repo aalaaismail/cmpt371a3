@@ -86,7 +86,10 @@ public class RDT {
 		rcvThread.start();
 	}
 	
-	public static void setLossRate(double rate) {lossRate = rate;}
+	public static void setLossRate(double rate) 
+	{
+		lossRate = rate;
+	}
 	
 	// called by app
 	// returns total number of sent bytes  
@@ -95,8 +98,30 @@ public class RDT {
 		//****** complete
 		
 		// divide data into segments
-		// create a new byte array
-		// copy the first MSS 
+		RDTSegment seg = new RDTSegment();
+		
+		//to keep track of the data index
+		int dataIndex = 0;
+		
+		for (int i = 0; i < MSS; i++)
+		{
+			seg.data[i] = data[dataIndex];
+			dataIndex++;
+		}
+		//set the headers
+		// no flags or ack number
+		
+		seg.seqNum = sndBuf.next; //set sequence number
+		
+		seg.length = MSS + RDTSegment.HDR_SIZE;
+		
+		//set the receive window to the difference between the slots that are filled and the buffer size
+		seg.rcvWin = rcvBuf.size = (rcvBuf.next%rcvBuf.size - rcvBuf.base%rcvBuf.size);
+		
+		//set the checksum
+		seg.checksum = seg.computeChecksum();
+		
+		
 		// make a segment
 		
 		// put each segment into sndBuf using putNext
@@ -169,7 +194,8 @@ class RDTBuffer {
 	
 	// Put a segment in the next available slot in the buffer
 	public void putNext(RDTSegment seg) {		
-		try {
+		try 
+		{
 			
 			semEmpty.acquire(); // wait for an empty slot 
 			
@@ -182,19 +208,23 @@ class RDTBuffer {
 			semFull.release(); // increase #of full slots
 			
 			
-		} catch(InterruptedException e) {
+		} 
+		catch(InterruptedException e) 
+		{
 			System.out.println("Buffer put(): " + e);
 		}
 	}
 	
 	// return the next in-order segment
-	public RDTSegment getNext() {
+	public RDTSegment getNext() 
+	{
 		return buf[next%size];
 	}
 	
 	// Put a segment in the *right* slot based on seg.seqNum
 	// used by receiver in Selective Repeat
-	public void putSeqNum (RDTSegment seg) {
+	public void putSeqNum (RDTSegment seg) 
+	{
 		// ***** complete
 
 	}
