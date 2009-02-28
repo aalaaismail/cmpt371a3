@@ -134,7 +134,7 @@ public class RDT {
 			if (protocol == GBN) //Go Back N
 				sndBuf.putNext(seg);
 			else //Selective Repeat
-				sndBuf.putSeqNum(seg);
+				sndBuf.putNext(seg);
 			
 			Utility.udp_send(sndBuf.getNext(), socket, dst_ip, dst_port);
 			
@@ -354,11 +354,14 @@ class ReceiverThread extends Thread {
 			if(rcvseg.isValid()){
 				
 				// if the segment contains an ACK
-				if(rcvseg.containsAck()){
+				if(rcvseg.containsAck())
+				{
 					// if GBN
-					if(RDT.protocol == 1){
+					if(RDT.protocol == 1)
+					{
 						// if ackNum is > than base it means it is a valid ack
-						if(rcvseg.ackNum > sndBuf.base){
+						if(rcvseg.ackNum > sndBuf.base)
+						{
 							if(rcvseg.ackNum >= sndBuf.base)
 								sndBuf.base = rcvseg.ackNum;
 						}
@@ -367,13 +370,15 @@ class ReceiverThread extends Thread {
 					// if SR
 					else{
 						// check if received ack has already been received
-						if(sndBuf.buf[rcvseg.ackNum%sndBuf.size].ackReceived != true){
+						if(sndBuf.buf[rcvseg.ackNum%sndBuf.size].ackReceived != true)
+						{
 							
 							// set flag to show it has been received
 							sndBuf.buf[rcvseg.ackNum%sndBuf.size].ackReceived = true;
 	
 							// if it is the base then set the base to next unACKd segment
-							if(rcvseg.ackNum == sndBuf.base){
+							if(rcvseg.ackNum == sndBuf.base)
+							{
 								int i = 1;
 								// traverse buffer starting at base+1 looking for unreceived
 								while(sndBuf.buf[(sndBuf.base+i)%sndBuf.size].ackReceived != false)
@@ -388,7 +393,8 @@ class ReceiverThread extends Thread {
 				// not ACK means it contains data
 				else{
 					
-					if(rcvBuf.checkSeqNum(rcvseg)){
+					if(rcvBuf.checkSeqNum(rcvseg))
+					{
 						// if GBN then put in next slot of buffer
 						if(RDT.protocol == 1)
 							rcvBuf.putNext(rcvseg);
@@ -400,23 +406,7 @@ class ReceiverThread extends Thread {
 				}
 			}
 			
-			//if we have an ACK set some flag to show it has been received
-			//if it is the base move the base to the next unACKd segment
-			
-			//else if it is not an ACK
-				//put data into rcvbuf and send an ack
-					//if using SR put in the correct index to preserve order
-			
 		}
-		// *** complete 
-		// Essentially:  while(cond==true){  // may loop for ever if you will not implement RDT::close()  
-		//                socket.receive(pkt)
-		//                seg = make a segment from the pkt
-		//                verify checksum of seg
-		//	              if seg contains ACK, process it potentailly removing segments from sndBuf
-		//                if seg contains data, put the data in rcvBuf and do any necessary 
-		//                             stuff (e.g, send ACK)
-		//
 	}
 	
 	
