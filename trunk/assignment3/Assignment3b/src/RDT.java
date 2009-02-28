@@ -107,7 +107,7 @@ public class RDT {
 			RDTSegment seg = new RDTSegment();
 			
 			//split the data by the MSS
-			for (int i = 0; i < MSS; i++)
+			for (int i = 0; (i < MSS) && (i < seg.data.length); i++)
 			{
 				seg.data[i] = data[dataIndex];
 				dataIndex++;
