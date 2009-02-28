@@ -153,8 +153,8 @@ public class RDT {
 			
 			// schedule timeout for segment(s) 
 			timer.schedule(new TimeoutHandler(sndBuf, sndBuf.getNext(), socket, dst_ip, dst_port), TimeoutDelay, TimeoutDelay);
-			if (sndBuf.buf[(indexNum%sndBuf.size)].ackReceived == true)
-				timer.cancel();
+			//if (sndBuf.buf[(indexNum%sndBuf.size)].ackReceived == true)
+				//timer.cancel();
 		}
 		return size;
 	}

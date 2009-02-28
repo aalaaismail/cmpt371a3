@@ -29,7 +29,7 @@ class TimeoutHandler extends TimerTask {
 		System.out.println(System.currentTimeMillis()+ ":Timeout for seg: " + seg.seqNum);
 		System.out.flush();
 		if (seg.ackReceived)
-			System.exit(0);
+			this.cancel();
 		
 		// complete 
 		switch(RDT.protocol){
