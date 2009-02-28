@@ -381,9 +381,11 @@ class ReceiverThread extends Thread {
 						// check if received ack has already been received
 						if(sndBuf.buf[rcvseg.ackNum%sndBuf.size].ackReceived != true)
 						{
-							
+							System.out.println("ACK received");
+
 							// set flag to show it has been received
 							sndBuf.buf[rcvseg.ackNum%sndBuf.size].ackReceived = true;
+							
 	
 							// if it is the base then set the base to next unACKd segment
 							if(rcvseg.ackNum == sndBuf.base)
@@ -411,6 +413,14 @@ class ReceiverThread extends Thread {
 						// if SR then put in correct index
 						else
 							rcvBuf.putSeqNum(rcvseg);
+						
+						// send ACK
+						RDTSegment seg = new RDTSegment();
+						seg.ackNum = rcvseg.seqNum;
+						seg.flags = 16;
+						seg.checksum = seg.computeChecksum();
+						Utility.udp_send(seg, socket, dst_ip, dst_port);
+						
 					}
 				}
 			}
