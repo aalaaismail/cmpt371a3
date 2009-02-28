@@ -44,24 +44,58 @@ public class RDTSegment {
 		ackReceived = false;
 	}
 	
-	public boolean containsAck() {
-		// complete
+	public boolean containsAck() 
+	{
 		//if flags == 16 then there is an ACK if 0 then no ACK
+		return (flags == 16);
 	}
 	
-	public boolean containsData() {
-		//complete
+	public boolean containsData() 
+	{
 		//if the length is the header size then there is no data
+		return (length == HDR_SIZE);
 	}
 
-	public int computeChecksum() {
-		// complete
-		// follow the notes
-		return 0;
+	public int computeChecksum() 
+	{
+		//add all the header integers
+		int sum = flags + seqNum + ackNum + length + rcvWin;
+		
+		//index counter
+		int i = 0;
+		
+		//what we will turn into an integer
+		byte tempByte[] = new byte[4];
+		int tempSum = 0;
+		
+		//every 4 bytes we make into an integer and add it to the sum
+		while (i < data.length )
+		{
+			
+			//create a new byte array when we loop around
+			if(i%tempByte.length == 0)
+			{
+				tempByte = new byte[4];
+				
+				//set byte array to 0
+				for (int j = 0; j < tempByte.length; j++)
+					tempByte[j] = 0;
+			}
+		
+			tempByte[i%4] = data[i];
+			
+			//if we just filled the last index then turn this into an integer and add it to the sum
+			if(i%tempByte.length == data.length - 1)
+				sum += Utility.byteToInt(tempByte, tempSum);
+			i++;
+		}
+		
+		return sum;
 	}
-	public boolean isValid() {
-		// complete
-		// if receiving then compute sum and add it to the checksum and check if they are all 1s
+	public boolean isValid() 
+	{
+		//compute checksum
+		return (computeChecksum() - checksum == 0);
 	}
 	
 	// converts this seg to a series of bytes
