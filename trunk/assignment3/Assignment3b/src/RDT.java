@@ -345,7 +345,60 @@ class ReceiverThread extends Thread {
 				System.out.println("ERROR " + e);
 				System.exit(0);
 			}
-			//verify the checksum
+			
+			// turn the received data into a segment
+			RDTSegment rcvseg = new RDTSegment();
+			makeSegment(rcvseg, rcvpkt.getData());
+			
+			// verify the checksum
+			if(rcvseg.isValid()){
+				
+				// if the segment contains an ACK
+				if(rcvseg.containsAck()){
+					// if GBN
+					if(RDT.protocol == 1){
+						// if ackNum is > than base it means it is a valid ack
+						if(rcvseg.ackNum > sndBuf.base){
+							if(rcvseg.ackNum >= sndBuf.base)
+								sndBuf.base = rcvseg.ackNum;
+						}
+					}
+					
+					// if SR
+					else{
+						// check if received ack has already been received
+						if(sndBuf.buf[rcvseg.ackNum%sndBuf.size].ackReceived != true){
+							
+							// set flag to show it has been received
+							sndBuf.buf[rcvseg.ackNum%sndBuf.size].ackReceived = true;
+	
+							// if it is the base then set the base to next unACKd segment
+							if(rcvseg.ackNum == sndBuf.base){
+								int i = 1;
+								// traverse buffer starting at base+1 looking for unreceived
+								while(sndBuf.buf[(sndBuf.base+i)%sndBuf.size].ackReceived != false)
+									i++;
+								// set base to next unreceived segment
+								sndBuf.base = sndBuf.base+i;
+							}
+						}
+					}
+				}
+				
+				// not ACK means it contains data
+				else{
+					
+					if(rcvBuf.checkSeqNum(rcvseg)){
+						// if GBN then put in next slot of buffer
+						if(RDT.protocol == 1)
+							rcvBuf.putNext(rcvseg);
+						
+						// if SR then put in correct index
+						else
+							rcvBuf.putSeqNum(rcvseg);
+					}
+				}
+			}
 			
 			//if we have an ACK set some flag to show it has been received
 			//if it is the base move the base to the next unACKd segment
