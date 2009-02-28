@@ -34,7 +34,9 @@ public class RDT {
 	private RDTBuffer sndBuf;
 	private RDTBuffer rcvBuf;
 	
-	private ReceiverThread rcvThread;  
+	private ReceiverThread rcvThread; 
+	
+	public TimeoutHandler timeoutHandlers[];
 	
 	RDT (String dst_hostname_, int dst_port_, int local_port_) 
 	{
@@ -74,6 +76,9 @@ public class RDT {
 		 
 		 //set buffer to the one specified
 		sndBuf = new RDTBuffer(sndBufSize);
+		
+		//set the timeouthandler array to the sndbuffer size
+		timeoutHandlers = new TimeoutHandler[sndBufSize];
 		
 		//set which protocol we are using
 		protocol = protocol_;
@@ -136,6 +141,8 @@ public class RDT {
 			//set the checksum and set it
 			seg.checksum = seg.computeChecksum();
 			
+			int indexNum = sndBuf.next%sndBuf.size;
+			
 			// put each segment into sndBuf
 			if (protocol == GBN) //Go Back N
 				sndBuf.putNext(seg);
@@ -146,6 +153,8 @@ public class RDT {
 			
 			// schedule timeout for segment(s) 
 			timer.schedule(new TimeoutHandler(sndBuf, sndBuf.getNext(), socket, dst_ip, dst_port), TimeoutDelay, TimeoutDelay);
+			if (sndBuf.buf[(indexNum%sndBuf.size)].ackReceived == true)
+				timer.cancel();
 		}
 		return size;
 	}
