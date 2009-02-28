@@ -105,10 +105,16 @@ public class RDT {
 		{
 			// divide data into segments
 			RDTSegment seg = new RDTSegment();
+			int i = 0;
 			
 			//split the data by the MSS
-			for (int i = 0; (i < MSS) && (i < seg.data.length); i++)
+			for (i = 0; (i < MSS) && (i < seg.data.length); i++)
 			{
+				if(dataIndex == size)
+				{
+					done = true;
+					break;
+				}
 				seg.data[i] = data[dataIndex];
 				dataIndex++;
 			}
@@ -122,7 +128,7 @@ public class RDT {
 			seg.seqNum = sndBuf.next; //set sequence number
 			
 			//segment length is the maximum segement size + the header size
-			seg.length = MSS + RDTSegment.HDR_SIZE;
+			seg.length = i + RDTSegment.HDR_SIZE;
 			
 			//set the receive window to the difference between the slots that are filled and the buffer size
 			seg.rcvWin = rcvBuf.size - (rcvBuf.next%rcvBuf.size - rcvBuf.base%rcvBuf.size);
