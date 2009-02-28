@@ -388,7 +388,8 @@ class ReceiverThread extends Thread {
 					// if SR
 					else{
 						// check if received ack has already been received
-						if(sndBuf.buf[rcvseg.ackNum%sndBuf.size].ackReceived != true)
+						if(sndBuf.buf[rcvseg.ackNum%sndBuf.size].ackReceived != true || 
+								sndBuf.buf[rcvseg.ackNum%sndBuf.size] == null)
 						{
 							System.out.println("ACK received");
 
