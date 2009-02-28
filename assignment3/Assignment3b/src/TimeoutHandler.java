@@ -15,8 +15,8 @@ class TimeoutHandler extends TimerTask {
 	InetAddress ip;
 	int port;
 	
-	TimeoutHandler (RDTBuffer sndBuf_, RDTSegment s, DatagramSocket sock, 
-			InetAddress ip_addr, int p) {
+	TimeoutHandler (RDTBuffer sndBuf_, RDTSegment s, DatagramSocket sock, InetAddress ip_addr, int p) 
+	{
 		sndBuf = sndBuf_;
 		seg = s;
 		socket = sock;
@@ -33,9 +33,12 @@ class TimeoutHandler extends TimerTask {
 		switch(RDT.protocol){
 			case RDT.GBN:
 				//resend the same packet since GBN's window size is one
+				Utility.udp_send(seg, socket, ip, port);
+				
 				break;
 			case RDT.SR:
 				//resend the segment that timed out
+				Utility.udp_send(seg, socket, ip, port);
 				break;
 			default:
 				System.out.println("Error in TimeoutHandler:run(): unknown protocol");
