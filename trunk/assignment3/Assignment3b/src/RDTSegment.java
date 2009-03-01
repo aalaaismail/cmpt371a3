@@ -35,6 +35,7 @@ public class RDTSegment {
 
 	RDTSegment() {
 		data = new byte[RDT.MSS];
+		//for ()
 		flags = 0; 
 		checksum = 0;
 		seqNum = 0;
@@ -110,7 +111,7 @@ public class RDTSegment {
 		Utility.intToByte(rcvWin, payload, RCV_WIN_OFFSET);
 		Utility.intToByte(length, payload, LENGTH_OFFSET);
 		//add data
-		for (int i=0; i<length; i++)
+		for (int i=0; i<length-HDR_SIZE; i++)
 			payload[i+HDR_SIZE] = data[i];
 	}
 	

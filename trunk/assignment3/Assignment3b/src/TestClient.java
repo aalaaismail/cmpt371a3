@@ -33,7 +33,7 @@ public class TestClient {
 	     RDT.setLossRate(0.4);
 	  
 	     byte[] buf = new byte[RDT.MSS];  //buffer set to MSS
-	     byte[] data = new byte[10]; //data
+	     byte[] data = new byte[500]; //data
 	     for (int i=0; i<data.length; i++)
 	    	 data[i] = 0;
 	     rdt.send(data, data.length);

@@ -414,6 +414,15 @@ class ReceiverThread extends Thread {
 								// set base to next unreceived segment
 								sndBuf.base = sndBuf.base+i;
 							}
+							try
+							{
+								sndBuf.semEmpty.release();
+								sndBuf.semFull.acquire();
+							}
+							catch(InterruptedException e) 
+							{
+								System.out.println("Buffer putSeqNum(): " + e);
+							}
 						}
 					}
 				}
@@ -458,8 +467,10 @@ class ReceiverThread extends Thread {
 		//Note: Unlike C/C++, Java does not support explicit use of pointers! 
 		// we have to make another copy of the data
 		// This is not effecient in protocol implementation
-		for (int i=0; i< seg.length; i++)
-			seg.data[i] = payload[i + RDTSegment.HDR_SIZE]; 
+		for (int i=0; (i< payload.length); i++)
+		{
+			seg.data[i] = payload[i + RDTSegment.HDR_SIZE-1];
+		}
 	}
 	
 } // end ReceiverThread class
