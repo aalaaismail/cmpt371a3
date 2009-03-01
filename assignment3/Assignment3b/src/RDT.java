@@ -156,8 +156,11 @@ public class RDT {
 			
 			// schedule timeout for segment(s) 
 			timer.schedule(new TimeoutHandler(sndBuf, sndBuf.getNext(), socket, dst_ip, dst_port), TimeoutDelay, TimeoutDelay);
+
 			//if (sndBuf.buf[(indexNum%sndBuf.size)].ackReceived == true)
 				//timer.cancel();
+
+			
 		}
 		return size;
 	}
@@ -388,7 +391,7 @@ class ReceiverThread extends Thread {
 						}
 					}
 					
-					// if SR
+					// if SR 
 					else{
 						// check if received ack has already been received
 						if(sndBuf.buf[rcvseg.ackNum%sndBuf.size].ackReceived != true || 
@@ -405,7 +408,8 @@ class ReceiverThread extends Thread {
 							{
 								int i = 1;
 								// traverse buffer starting at base+1 looking for unreceived
-								while(sndBuf.buf[(sndBuf.base+i)%sndBuf.size].ackReceived != false)
+								while(sndBuf.buf[(sndBuf.base+i)%sndBuf.size].ackReceived != false ||
+										sndBuf.buf[(sndBuf.base+i)%sndBuf.size] == null)
 									i++;
 								// set base to next unreceived segment
 								sndBuf.base = sndBuf.base+i;
