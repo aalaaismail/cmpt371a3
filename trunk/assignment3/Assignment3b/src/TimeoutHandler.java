@@ -24,16 +24,16 @@ class TimeoutHandler extends TimerTask {
 		port = p;
 	}
 	
-	public void run() {
-		
-		System.out.println(System.currentTimeMillis()+ ":Timeout for seg: " + seg.seqNum);
-		System.out.flush();
+	public void run() 
+	{
 		if (seg.ackReceived)
 			this.cancel();
+		else
+		{
+			System.out.println(System.currentTimeMillis()+ ":Timeout for seg: " + seg.seqNum);
+			System.out.flush();
 		
 		// complete 
-		if (!seg.ackReceived)
-		{
 			switch(RDT.protocol)
 			{
 				case RDT.GBN:

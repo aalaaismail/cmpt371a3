@@ -62,14 +62,13 @@ public class RDT {
 	{
 		local_port = local_port_;
 		dst_port = dst_port_;
-		 try {
+		 try 
+		 {
 			 //create a new udp socket
 			 socket = new DatagramSocket(local_port);
 			 
 			 //looks up the destnation IP address
 			 dst_ip = InetAddress.getByName(dst_hostname_);
-			 
-			 
 		 } 
 		 
 		 catch (IOException e) 
@@ -79,9 +78,6 @@ public class RDT {
 		 
 		 //set buffer to the one specified
 		sndBuf = new RDTBuffer(sndBufSize);
-		
-		//set the timeouthandler array to the sndbuffer size
-		//timeoutHandlers = new TimeoutHandler[sndBufSize];
 		
 		//set which protocol we are using
 		protocol = protocol_;
@@ -116,7 +112,7 @@ public class RDT {
 			int i = 0;
 			
 			//split the data by the MSS
-			for (i = 0; (i < MSS) && (i < seg.data.length); i++)
+			for (i = 0; (i < MSS) && (i < size); i++)
 			{
 				if(dataIndex == size)
 				{
@@ -144,22 +140,16 @@ public class RDT {
 			//set the checksum and set it
 			seg.checksum = seg.computeChecksum();
 			
-			//int indexNum = sndBuf.next%sndBuf.size;
-			
 			// put each segment into sndBuf
 			if (protocol == GBN) //Go Back N
 				sndBuf.putNext(seg);
 			else //Selective Repeat
 				sndBuf.putNext(seg);
 			
-			Utility.udp_send(sndBuf.getNext(), socket, dst_ip, dst_port);
+			Utility.udp_send(seg, socket, dst_ip, dst_port);
 			
 			// schedule timeout for segment(s) 
-			timer.schedule(new TimeoutHandler(sndBuf, sndBuf.getNext(), socket, dst_ip, dst_port), TimeoutDelay, TimeoutDelay);
-
-			//if (sndBuf.buf[(indexNum%sndBuf.size)].ackReceived == true)
-				//timer.cancel();
-
+			timer.schedule(new TimeoutHandler(sndBuf, seg, socket, dst_ip, dst_port), TimeoutDelay, TimeoutDelay);
 			
 		}
 		return size;
@@ -216,9 +206,9 @@ class RDTBuffer {
 		base = next = 0;
 		
 		//create semaphores
-		semMutex = new Semaphore(1, true);
-		semFull =  new Semaphore(0, true);
-		semEmpty = new Semaphore(bufSize, true);
+		semMutex = new Semaphore(1, true);  //lock for the buffer
+		semFull =  new Semaphore(0, true);  //keeps track of elements inside buffer
+		semEmpty = new Semaphore(bufSize, true);  //keeps track of the number of empty slots
 	}
 
 	
@@ -228,9 +218,9 @@ class RDTBuffer {
 	{		
 		try 
 		{
-			
+			System.out.println("putting item in buffer");
 			semEmpty.acquire(); // wait for an empty slot 
-			
+
 			//to ensure only one thread is accessing the buffer at a time
 			semMutex.acquire(); // wait for mutex 
 				buf[next%size] = seg;
@@ -238,6 +228,7 @@ class RDTBuffer {
 			semMutex.release();
 			
 			semFull.release(); // increase #of full slots
+			System.out.println("putting item in buffer2");
 			
 			
 		} 
@@ -253,8 +244,7 @@ class RDTBuffer {
 		try 
 		{
 			
-			semFull.acquire(); // wait for a full slot 
-			
+			semFull.acquire(); //drop a full slot
 			//to ensure only one thread is accessing the buffer at a time
 			semMutex.acquire(); // wait for mutex 
 				buf[base%size] = seg;
@@ -262,6 +252,7 @@ class RDTBuffer {
 			semMutex.release();
 			
 			semEmpty.release(); // increase #of empty slots
+			System.out.println("Taking something outta buffer");
 				
 		} 
 		catch(InterruptedException e) 
@@ -290,11 +281,10 @@ class RDTBuffer {
 			//to ensure only one thread is accessing the buffer at a time
 			semMutex.acquire(); // wait for mutex 
 				buf[seg.seqNum%size] = seg;
-				//next++;  
 			semMutex.release();
 			
 			semFull.release(); // increase #of full slots
-			
+			System.out.println("putseqNum success!");
 			
 		} 
 		catch(InterruptedException e) 
@@ -304,25 +294,46 @@ class RDTBuffer {
 
 	}
 	
+	//checks whether the seauence number already exists inside the buffer
 	public boolean checkSeqNum(RDTSegment seg)
 	{
-		int compareNum = 0;
+		int compareNum = -1;
 		try 
 		{
 			//to ensure only one thread is accessing the buffer at a time
 			semMutex.acquire(); // wait for mutex
+			
+				//if the buffer is not null grab the sequence number inside the buffer
 				if (buf[seg.seqNum%size] != null)
 					compareNum = buf[seg.seqNum%size].seqNum;
-				else
-					compareNum = -1;
 			semMutex.release();			
 		} 
 		catch(InterruptedException e) 
 		{
-			System.out.println("Buffer putSeqNum(): " + e);
+			System.out.println("Buffer checkSeqNum(): " + e);
 		}
-		
-		return(seg.seqNum == compareNum || compareNum == -1);
+		System.out.println(compareNum);
+		return(seg.seqNum != compareNum || compareNum == -1);
+
+	}
+	
+	//acks the sequence number
+	public void ackSegment(int ackNum)
+	{
+		try 
+		{
+			//to ensure only one thread is accessing the buffer at a time
+			semMutex.acquire(); // wait for mutex
+			
+				//if the buffer is not null grab the sequence number inside the buffer
+				if (buf[ackNum%size] != null)
+					buf[ackNum%size].ackReceived = true;
+			semMutex.release();			
+		} 
+		catch(InterruptedException e) 
+		{
+			System.out.println("Buffer ackSegment(): " + e);
+		}
 
 	}
 	
@@ -375,61 +386,94 @@ class ReceiverThread extends Thread {
 			makeSegment(rcvseg, rcvpkt.getData());
 			
 			// verify the checksum
-			if(rcvseg.isValid()){
-				
+			if(rcvseg.isValid())
+			{
+				System.out.println("PACKET VALID");
+				System.out.println("seqNum="
+						+ rcvseg.seqNum + "  ackNum=" + rcvseg.ackNum + "  flags=" + rcvseg.flags);
 				// if the segment contains an ACK
 				if(rcvseg.containsAck())
 				{
+					System.out.println("ACK RECEIVED");
 					// if GBN
 					if(RDT.protocol == 1)
 					{
 						// if ackNum is > than base it means it is a valid ack
-						if(rcvseg.ackNum > sndBuf.base)
+						if(rcvseg.ackNum >= sndBuf.base)
 						{
-							if(rcvseg.ackNum >= sndBuf.base)
-								sndBuf.base = rcvseg.ackNum;
+							System.out.println("PROCESSING ACK");
+							sndBuf.ackSegment(rcvseg.ackNum);
+							sndBuf.base = rcvseg.ackNum + 1;  
+							sndBuf.semEmpty.release(); //number of empty slots increases
+							try
+							{
+								sndBuf.semFull.acquire(); //number of full slots decrease
+							}
+							catch(InterruptedException e) 
+							{
+								System.out.println("Reciever thread run(): " + e);
+							}
 						}
 					}
 					
 					// if SR 
-					else{
+					else
+					{
 						// check if received ack has already been received
-						if(sndBuf.buf[rcvseg.ackNum%sndBuf.size].ackReceived != true || 
-								sndBuf.buf[rcvseg.ackNum%sndBuf.size] == null)
+						if(sndBuf.buf[rcvseg.ackNum%sndBuf.size] == null ||
+								!sndBuf.buf[rcvseg.ackNum%sndBuf.size].ackReceived)
 						{
-							System.out.println("ACK received");
-
+							System.out.println("PROCESSING ACK");
 							// set flag to show it has been received
-							sndBuf.buf[rcvseg.ackNum%sndBuf.size].ackReceived = true;
-							
-	
+							//sndBuf.buf[rcvseg.ackNum%sndBuf.size].ackReceived = true;
+							sndBuf.ackSegment(rcvseg.ackNum);
+							System.out.println("marked as true");
 							// if it is the base then set the base to next unACKd segment
 							if(rcvseg.ackNum == sndBuf.base)
 							{
 								int i = 1;
+								try
+								{
+									sndBuf.semEmpty.release();
+									sndBuf.semFull.acquire();
+								}
+								catch(InterruptedException e) 
+								{
+									System.out.println("Buffer putSeqNum(): " + e);
+								}
 								// traverse buffer starting at base+1 looking for unreceived
-								while(sndBuf.buf[(sndBuf.base+i)%sndBuf.size].ackReceived != false ||
-										sndBuf.buf[(sndBuf.base+i)%sndBuf.size] == null)
+								while(sndBuf.buf[(sndBuf.base+i)%sndBuf.size] != null && 
+										sndBuf.buf[(sndBuf.base+i)%sndBuf.size].ackReceived &&
+										i < sndBuf.size)
+								{
 									i++;
+									try
+									{
+										System.out.println(i);
+										sndBuf.semEmpty.release();
+										sndBuf.semFull.acquire();
+									}
+									catch(InterruptedException e) 
+									{
+										System.out.println("Buffer putSeqNum(): " + e);
+									}
+									Thread.yield();
+									
+								}
 								// set base to next unreceived segment
 								sndBuf.base = sndBuf.base+i;
 							}
-							try
-							{
-								sndBuf.semEmpty.release();
-								sndBuf.semFull.acquire();
-							}
-							catch(InterruptedException e) 
-							{
-								System.out.println("Buffer putSeqNum(): " + e);
-							}
+							System.out.println("found next base");
+
+
 						}
 					}
 				}
 				
 				// not ACK means it contains data
-				else{
-					
+				else
+				{
+					System.out.println("THERES DATA");
 					if(rcvBuf.checkSeqNum(rcvseg))
 					{
 						// if GBN then put in next slot of buffer
@@ -439,39 +483,51 @@ class ReceiverThread extends Thread {
 						// if SR then put in correct index
 						else
 							rcvBuf.putSeqNum(rcvseg);
-						
+					}
 						// send ACK
 						RDTSegment seg = new RDTSegment();
 						seg.ackNum = rcvseg.seqNum;
 						seg.flags = 16;
+						seg.length = RDTSegment.HDR_SIZE;
 						seg.checksum = seg.computeChecksum();
 						Utility.udp_send(seg, socket, dst_ip, dst_port);
 						
-					}
+					
 				}
 			}
-			
 		}
 	}
 	
 	
 //	 create a segment from received bytes 
-	void makeSegment(RDTSegment seg, byte[] payload) {
-	
+	void makeSegment(RDTSegment seg, byte[] payload) 
+	{	
+		/*
+		seg.seqNum = getData(payload, RDTSegment.SEQ_NUM_OFFSET);
+		seg.ackNum = getData(payload, RDTSegment.ACK_NUM_OFFSET);
+		seg.flags  = getData(payload, RDTSegment.FLAGS_OFFSET);
+		System.out.println(seg.flags);
+		seg.checksum = getData(payload, RDTSegment.CHECKSUM_OFFSET);
+		seg.rcvWin = getData(payload, RDTSegment.RCV_WIN_OFFSET);
+		seg.length = getData(payload, RDTSegment.LENGTH_OFFSET);
+		*/
+		
 		seg.seqNum = Utility.byteToInt(payload, RDTSegment.SEQ_NUM_OFFSET);
 		seg.ackNum = Utility.byteToInt(payload, RDTSegment.ACK_NUM_OFFSET);
 		seg.flags  = Utility.byteToInt(payload, RDTSegment.FLAGS_OFFSET);
+		//System.out.println(Utility.byteToInt(payload, RDTSegment.FLAGS_OFFSET));
 		seg.checksum = Utility.byteToInt(payload, RDTSegment.CHECKSUM_OFFSET);
 		seg.rcvWin = Utility.byteToInt(payload, RDTSegment.RCV_WIN_OFFSET);
 		seg.length = Utility.byteToInt(payload, RDTSegment.LENGTH_OFFSET);
 		//Note: Unlike C/C++, Java does not support explicit use of pointers! 
 		// we have to make another copy of the data
-		// This is not effecient in protocol implementation
-		for (int i=0; (i< payload.length); i++)
+		// This is not effecient in protocol implementation*/
+		for (int i=0; (i< payload.length - RDTSegment.HDR_SIZE); i++)
 		{
-			seg.data[i] = payload[i + RDTSegment.HDR_SIZE-1];
+			seg.data[i] = payload[i + RDTSegment.HDR_SIZE];
 		}
 	}
+		
 	
 } // end ReceiverThread class
 
