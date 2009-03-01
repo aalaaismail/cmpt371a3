@@ -54,7 +54,7 @@ public class RDTSegment {
 	public boolean containsData() 
 	{
 		//if the length is the header size then there is no data
-		return (length == HDR_SIZE);
+		return !(length == HDR_SIZE);
 	}
 
 	public int computeChecksum() 

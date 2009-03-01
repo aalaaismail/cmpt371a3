@@ -17,15 +17,17 @@ public class Utility {
 			InetAddress ip, int port) {
 			
 		double d = RDT.random.nextDouble();
+		System.out.println(seg.flags);
 		if ( d < RDT.lossRate) { // simulate network loss
 			System.out.println(System.currentTimeMillis()+":udp_send: Lost Segment: seqNum=" + 
-					       seg.seqNum + "  ackNum=" + seg.ackNum + " ***");
+					       seg.seqNum + "  ackNum=" + seg.ackNum + " flags=" + seg.flags + " ***");
 			System.out.flush();
 	        return;
 	    }
 		// prepare UDP payload 
 		int payloadSize = seg.length;
 		byte[] payload = new byte[payloadSize];
+		
 		seg.makePayload(payload);
 	
 		// corrupt some bits
@@ -41,7 +43,7 @@ public class Utility {
 		}
 		
 		System.out.println(System.currentTimeMillis()+":udp_send: sent Segment: seqNum=" 
-					+ seg.seqNum + "  ackNum=" + seg.ackNum
+					+ seg.seqNum + "  ackNum=" + seg.ackNum + "  flags=" + seg.flags
 					+ "   After delay= " + delay) ;
 		System.out.flush();
 		//seg.dump();
