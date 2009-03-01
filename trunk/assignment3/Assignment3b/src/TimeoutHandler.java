@@ -28,22 +28,26 @@ class TimeoutHandler extends TimerTask {
 		
 		System.out.println(System.currentTimeMillis()+ ":Timeout for seg: " + seg.seqNum);
 		System.out.flush();
-		if (seg.ackReceived)
-			this.cancel();
+		//if (seg.ackReceived)
+			//this.cancel();
 		
 		// complete 
-		switch(RDT.protocol){
-			case RDT.GBN:
-				//resend the same packet since GBN's window size is one
-				Utility.udp_send(seg, socket, ip, port);
-				
-				break;
-			case RDT.SR:
-				//resend the segment that timed out
-				Utility.udp_send(seg, socket, ip, port);
-				break;
-			default:
-				System.out.println("Error in TimeoutHandler:run(): unknown protocol");
+		if (!seg.ackReceived)
+		{
+			switch(RDT.protocol)
+			{
+				case RDT.GBN:
+					//resend the same packet since GBN's window size is one
+					Utility.udp_send(seg, socket, ip, port);
+					
+					break;
+				case RDT.SR:
+					//resend the segment that timed out
+					Utility.udp_send(seg, socket, ip, port);
+					break;
+				default:
+					System.out.println("Error in TimeoutHandler:run(): unknown protocol");
+			}
 		}
 		
 	}

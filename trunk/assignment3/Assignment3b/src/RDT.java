@@ -70,7 +70,10 @@ public class RDT {
 			 dst_ip = InetAddress.getByName(dst_hostname_);
 			 
 			 
-		 } catch (IOException e) {
+		 } 
+		 
+		 catch (IOException e) 
+		 {
 			 System.out.println("RDT constructor: " + e);
 		 }
 		 
@@ -78,7 +81,7 @@ public class RDT {
 		sndBuf = new RDTBuffer(sndBufSize);
 		
 		//set the timeouthandler array to the sndbuffer size
-		timeoutHandlers = new TimeoutHandler[sndBufSize];
+		//timeoutHandlers = new TimeoutHandler[sndBufSize];
 		
 		//set which protocol we are using
 		protocol = protocol_;
@@ -141,7 +144,7 @@ public class RDT {
 			//set the checksum and set it
 			seg.checksum = seg.computeChecksum();
 			
-			int indexNum = sndBuf.next%sndBuf.size;
+			//int indexNum = sndBuf.next%sndBuf.size;
 			
 			// put each segment into sndBuf
 			if (protocol == GBN) //Go Back N

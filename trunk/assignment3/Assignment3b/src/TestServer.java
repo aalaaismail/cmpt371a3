@@ -18,10 +18,11 @@ public class TestServer {
 	 * @param args
 	 */
 	public static void main(String[] args) throws Exception {
-		 if (args.length != 3) {
+		 if (args.length != 3) 
+		 {
 	         System.out.println("Required arguments: dst_hostname dst_port local_port");
 	         return;
-	      }
+	     }
 		 String hostname = args[0];
 	     int dst_port = Integer.parseInt(args[1]);
 	     int local_port = Integer.parseInt(args[2]);
