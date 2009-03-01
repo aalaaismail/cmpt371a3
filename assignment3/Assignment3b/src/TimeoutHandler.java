@@ -28,8 +28,8 @@ class TimeoutHandler extends TimerTask {
 		
 		System.out.println(System.currentTimeMillis()+ ":Timeout for seg: " + seg.seqNum);
 		System.out.flush();
-		//if (seg.ackReceived)
-			//this.cancel();
+		if (seg.ackReceived)
+			this.cancel();
 		
 		// complete 
 		if (!seg.ackReceived)
