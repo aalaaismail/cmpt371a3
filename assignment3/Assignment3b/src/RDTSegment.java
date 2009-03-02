@@ -19,6 +19,7 @@ public class RDTSegment {
 	public byte[] data;
 
 	public boolean ackReceived;
+	//public boolean rdtReceived;
 	
 	public TimeoutHandler timeoutHandler;  // make it for every segment, 
 	                                       // will be used in selective repeat
@@ -35,7 +36,6 @@ public class RDTSegment {
 
 	RDTSegment() {
 		data = new byte[RDT.MSS];
-		//for ()
 		flags = 0; 
 		checksum = 0;
 		seqNum = 0;
@@ -43,6 +43,7 @@ public class RDTSegment {
 		length = 0;
 		rcvWin = 0;
 		ackReceived = false;
+		//rdtReceived = false;
 	}
 	
 	public boolean containsAck() 
