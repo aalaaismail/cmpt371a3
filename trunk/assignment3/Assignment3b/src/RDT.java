@@ -14,7 +14,7 @@ import java.util.concurrent.*;
 public class RDT {
 
 	public static final int MSS = 100; // Max segement size in bytes
-	public static final int RTO = 500; // Retransmission Timeout in msec
+	public static final int RTO = 2000; // Retransmission Timeout in msec
 	public static final int ERROR = -1;
 	public static final int MAX_BUF_SIZE = 3;  
 	public static final int GBN = 1;   // Go back N protocol
@@ -24,7 +24,6 @@ public class RDT {
 	public static double lossRate = 0.0;
 	public static Random random = new Random(); 
 	public static Timer timer = new Timer();
-	public static int TimeoutDelay = 1000; //1000ms
 	
 	private DatagramSocket socket; 
 	private InetAddress dst_ip;
@@ -40,6 +39,7 @@ public class RDT {
 	
 	RDT (String dst_hostname_, int dst_port_, int local_port_) 
 	{
+		
 		local_port = local_port_;
 		dst_port = dst_port_; 
 		try {
@@ -60,6 +60,7 @@ public class RDT {
 	//for specifying the send/receiver buffer sizes
 	RDT (String dst_hostname_, int dst_port_, int local_port_, int sndBufSize, int rcvBufSize, int protocol_)
 	{
+		//set the global variables to the parameters
 		local_port = local_port_;
 		dst_port = dst_port_;
 		 try 
@@ -82,15 +83,18 @@ public class RDT {
 		//set which protocol we are using
 		protocol = protocol_;
 		
+		//set the receive buffer size
 		if (protocol == GBN)
 			rcvBuf = new RDTBuffer(1);
 		else if (protocol == SR)
 			rcvBuf = new RDTBuffer(rcvBufSize);
 		
+		//start the receiver thread that receives acks and data for the sender and receiver respectively
 		rcvThread = new ReceiverThread(rcvBuf, sndBuf, socket, dst_ip, dst_port);
 		rcvThread.start();
 	}
 	
+	//set the loss rate
 	public static void setLossRate(double rate) 
 	{
 		lossRate = rate;
@@ -100,19 +104,21 @@ public class RDT {
 	// returns total number of sent bytes  
 	public int send(byte[] data, int size) 
 	{
+		//keep looping until we are done
 		boolean done = false;
 		
 		//to keep track of the index of the data array
 		int dataIndex = 0;
-		//****** complete
+		
+		//while we are not done
 		while (!done)
 		{
 			// divide data into segments
 			RDTSegment seg = new RDTSegment();
 			int i = 0;
 			
-			//split the data by the MSS
-			for (i = 0; (i < MSS) && (i < size); i++)
+			//split the data into segments of at most MSS
+			for (i = 0; (i < MSS && i < size); i++)
 			{
 				if(dataIndex == size)
 				{
@@ -146,10 +152,11 @@ public class RDT {
 			else //Selective Repeat
 				sndBuf.putNext(seg);
 			
+			//send the segment
 			Utility.udp_send(seg, socket, dst_ip, dst_port);
 			
 			// schedule timeout for segment(s) 
-			timer.schedule(new TimeoutHandler(sndBuf, seg, socket, dst_ip, dst_port), TimeoutDelay, TimeoutDelay);
+			timer.schedule(new TimeoutHandler(sndBuf, seg, socket, dst_ip, dst_port), RTO, RTO);
 			
 		}
 		return size;
@@ -161,15 +168,18 @@ public class RDT {
 	// returns number of bytes copied in buf
 	public int receive (byte[] buf, int size)
 	{
-		RDTSegment rdtSeg = new RDTSegment();
+		//make a variable to save data
+		RDTSegment rdtSeg;
 		
+		//set that variable to the next one to be removed
 		rdtSeg = rcvBuf.receiveNext();
 		
-		for (int i = 0; i < rdtSeg.length; i++)
-		{
-			buf = rdtSeg.data;
-		}
-		return rdtSeg.length - RDTSegment.HDR_SIZE;   // fix
+		//set the buffer to the data
+		for (int i = 0; i < (rdtSeg.length - RDTSegment.HDR_SIZE); i++)
+			buf[i] = rdtSeg.data[i];
+		//return the size of the data
+		
+		return (rdtSeg.length - RDTSegment.HDR_SIZE);   // fix
 	}
 	
 	// called by app
@@ -199,7 +209,7 @@ class RDTBuffer {
 		for (int i=0; i<bufSize; i++)
 			buf[i] = null;
 		
-		
+		//set the size of the buffer
 		size = bufSize;
 		
 		//base and next segment to be sent is set to 0
@@ -218,7 +228,7 @@ class RDTBuffer {
 	{		
 		try 
 		{
-			System.out.println("putting item in buffer");
+			//System.out.println("putting item in buffer");
 			semEmpty.acquire(); // wait for an empty slot 
 
 			//to ensure only one thread is accessing the buffer at a time
@@ -228,7 +238,7 @@ class RDTBuffer {
 			semMutex.release();
 			
 			semFull.release(); // increase #of full slots
-			System.out.println("putting item in buffer2");
+			//System.out.println("putting item in buffer2");
 			
 			
 		} 
@@ -247,18 +257,20 @@ class RDTBuffer {
 			semFull.acquire(); //drop a full slot
 			//to ensure only one thread is accessing the buffer at a time
 			semMutex.acquire(); // wait for mutex 
-				buf[base%size] = seg;
+				seg = buf[base%size];
+				//buf[base%size].rdtReceived = true;
 				base++;  
 			semMutex.release();
 			
 			semEmpty.release(); // increase #of empty slots
-			System.out.println("Taking something outta buffer");
+			//System.out.println("Taking segment " + seg.seqNum + " outta buffer");
 				
 		} 
 		catch(InterruptedException e) 
 		{
 			System.out.println("Buffer retreiveNext(): " + e);
 		}
+		System.out.println("RECEIEVE NEXT LENGTH: " + seg.length);
 		
 		return seg;
 	}
@@ -276,25 +288,36 @@ class RDTBuffer {
 		try 
 		{
 			
-			semEmpty.acquire(); // wait for an empty slot 
-			
+			semEmpty.acquire(); // wait for an empty slot
+
 			//to ensure only one thread is accessing the buffer at a time
 			semMutex.acquire(); // wait for mutex 
-				buf[seg.seqNum%size] = seg;
+			buf[seg.seqNum%size] = seg;
+			int i = 0;  //for index counting
+			if (seg.seqNum == base) //if the segment is the base we can move the window
+			{
+				while(buf[(base+i)%size] != null && //if the segment is not null
+						i < size && //and we are not going over the size of the buffer
+						//and if the sequence number in the buffer is equal to base+i that means we received that data as well
+						buf[(base+i)%size].seqNum == (base+i)) 
+				{
+					System.out.println("RELEASING");
+					i++;  //increase the counter
+					semFull.release(); // increase #of full slots
+				}
+			}
+			//release buffer mutex
 			semMutex.release();
 			
-			semFull.release(); // increase #of full slots
-			System.out.println("putseqNum success!");
-			
-		} 
+			//System.out.println("putseqNum success!");
+			}
 		catch(InterruptedException e) 
 		{
 			System.out.println("Buffer putSeqNum(): " + e);
 		}
-
 	}
 	
-	//checks whether the seauence number already exists inside the buffer
+	//returns false if the segment is already inside the buffer
 	public boolean checkSeqNum(RDTSegment seg)
 	{
 		int compareNum = -1;
@@ -312,12 +335,14 @@ class RDTBuffer {
 		{
 			System.out.println("Buffer checkSeqNum(): " + e);
 		}
-		System.out.println(compareNum);
+		//System.out.println(compareNum);
+		
+		//return true if the seg.seqNum is not equal to the one in the buffer or if the one in the buffer is null
 		return(seg.seqNum != compareNum || compareNum == -1);
 
 	}
 	
-	//acks the sequence number
+	//sets the segment ack boolean to true
 	public void ackSegment(int ackNum)
 	{
 		try 
@@ -325,7 +350,7 @@ class RDTBuffer {
 			//to ensure only one thread is accessing the buffer at a time
 			semMutex.acquire(); // wait for mutex
 			
-				//if the buffer is not null grab the sequence number inside the buffer
+				//if the buffer is not null set the ackReceived to true
 				if (buf[ackNum%size] != null)
 					buf[ackNum%size].ackReceived = true;
 			semMutex.release();			
@@ -365,7 +390,7 @@ class ReceiverThread extends Thread {
 		
 		while(true)
 		{
-			byte[] data = new byte[RDT.MSS];
+			byte[] data = new byte[RDT.MSS+RDTSegment.HDR_SIZE];
 			
 			//create a new packet for receiving
 			DatagramPacket rcvpkt = new DatagramPacket(data, data.length);
@@ -388,9 +413,9 @@ class ReceiverThread extends Thread {
 			// verify the checksum
 			if(rcvseg.isValid())
 			{
-				System.out.println("PACKET VALID");
+				//System.out.println("PACKET VALID");
 				System.out.println("seqNum="
-						+ rcvseg.seqNum + "  ackNum=" + rcvseg.ackNum + "  flags=" + rcvseg.flags);
+						+ rcvseg.seqNum + "  ackNum=" + rcvseg.ackNum + "  flags=" + rcvseg.flags + "  length=" + rcvseg.length);
 				// if the segment contains an ACK
 				if(rcvseg.containsAck())
 				{
@@ -402,17 +427,25 @@ class ReceiverThread extends Thread {
 						if(rcvseg.ackNum >= sndBuf.base)
 						{
 							System.out.println("PROCESSING ACK");
-							sndBuf.ackSegment(rcvseg.ackNum);
+							
+							//loops through the buffer processing each ack
+							for(int i = sndBuf.base; i <= rcvseg.ackNum; i++ )
+							{
+								//set boolean in buffer to true
+								sndBuf.ackSegment(i);
+								
+								try
+								{
+									sndBuf.semFull.acquire(); //number of full slots decrease
+									sndBuf.semEmpty.release(); //number of empty slots increases
+								}
+								catch(InterruptedException e) 
+								{
+									System.out.println("Reciever thread run(): " + e);
+								}
+								
+							}
 							sndBuf.base = rcvseg.ackNum + 1;  
-							sndBuf.semEmpty.release(); //number of empty slots increases
-							try
-							{
-								sndBuf.semFull.acquire(); //number of full slots decrease
-							}
-							catch(InterruptedException e) 
-							{
-								System.out.println("Reciever thread run(): " + e);
-							}
 						}
 					}
 					
@@ -474,16 +507,49 @@ class ReceiverThread extends Thread {
 				else
 				{
 					System.out.println("THERES DATA");
+					//System.out.println("length = " + rcvseg.length);
+					//check if we already received this data
 					if(rcvBuf.checkSeqNum(rcvseg))
 					{
+						//System.out.println("Putting in segment " + rcvseg.seqNum + " inside " + rcvseg.seqNum%rcvBuf.size + "with data " + rcvseg.data[0]
+						//+ " length=" + rcvseg.length);
 						// if GBN then put in next slot of buffer
 						if(RDT.protocol == 1)
-							rcvBuf.putNext(rcvseg);
+						{
+							//if the sequence number is the base then put it in the buffer.. else drop
+							if(rcvseg.seqNum <= rcvBuf.base)
+							{
+								System.out.println("SENDING ACK");
+								rcvBuf.putNext(rcvseg);
+								// send ACK
+								RDTSegment seg = new RDTSegment();
+								seg.ackNum = rcvseg.seqNum;
+								seg.flags = 16;
+								seg.length = RDTSegment.HDR_SIZE;
+								seg.checksum = seg.computeChecksum();
+								Utility.udp_send(seg, socket, dst_ip, dst_port);
+							}
+						}
 						
 						// if SR then put in correct index
-						else
+						// only receive data in the rcv window size
+						else if (RDT.protocol == 2 || rcvseg.seqNum < (rcvBuf.base + rcvBuf.size))
+						{
+							System.out.println("SENDING ACK 1");
 							rcvBuf.putSeqNum(rcvseg);
+							// send ACK
+							RDTSegment seg = new RDTSegment();
+							seg.ackNum = rcvseg.seqNum;
+							seg.flags = 16;
+							seg.length = RDTSegment.HDR_SIZE;
+							seg.checksum = seg.computeChecksum();
+							Utility.udp_send(seg, socket, dst_ip, dst_port);
+						}
 					}
+					
+					//if GBN and we already received this segment (its less than the base), send an ACK
+					else if (RDT.protocol == 1 || rcvseg.seqNum <= rcvBuf.base)
+					{
 						// send ACK
 						RDTSegment seg = new RDTSegment();
 						seg.ackNum = rcvseg.seqNum;
@@ -491,7 +557,19 @@ class ReceiverThread extends Thread {
 						seg.length = RDTSegment.HDR_SIZE;
 						seg.checksum = seg.computeChecksum();
 						Utility.udp_send(seg, socket, dst_ip, dst_port);
-						
+					}
+					//always send ack if we in SR
+					else if (RDT.protocol == 2)
+					{
+						System.out.println("SENDING ACK 2");
+						// send ACK
+						RDTSegment seg = new RDTSegment();
+						seg.ackNum = rcvseg.seqNum;
+						seg.flags = 16;
+						seg.length = RDTSegment.HDR_SIZE;
+						seg.checksum = seg.computeChecksum();
+						Utility.udp_send(seg, socket, dst_ip, dst_port);
+					}
 					
 				}
 			}
@@ -502,27 +580,20 @@ class ReceiverThread extends Thread {
 //	 create a segment from received bytes 
 	void makeSegment(RDTSegment seg, byte[] payload) 
 	{	
-		/*
-		seg.seqNum = getData(payload, RDTSegment.SEQ_NUM_OFFSET);
-		seg.ackNum = getData(payload, RDTSegment.ACK_NUM_OFFSET);
-		seg.flags  = getData(payload, RDTSegment.FLAGS_OFFSET);
-		System.out.println(seg.flags);
-		seg.checksum = getData(payload, RDTSegment.CHECKSUM_OFFSET);
-		seg.rcvWin = getData(payload, RDTSegment.RCV_WIN_OFFSET);
-		seg.length = getData(payload, RDTSegment.LENGTH_OFFSET);
-		*/
 		
 		seg.seqNum = Utility.byteToInt(payload, RDTSegment.SEQ_NUM_OFFSET);
 		seg.ackNum = Utility.byteToInt(payload, RDTSegment.ACK_NUM_OFFSET);
 		seg.flags  = Utility.byteToInt(payload, RDTSegment.FLAGS_OFFSET);
-		//System.out.println(Utility.byteToInt(payload, RDTSegment.FLAGS_OFFSET));
 		seg.checksum = Utility.byteToInt(payload, RDTSegment.CHECKSUM_OFFSET);
 		seg.rcvWin = Utility.byteToInt(payload, RDTSegment.RCV_WIN_OFFSET);
 		seg.length = Utility.byteToInt(payload, RDTSegment.LENGTH_OFFSET);
 		//Note: Unlike C/C++, Java does not support explicit use of pointers! 
 		// we have to make another copy of the data
 		// This is not effecient in protocol implementation*/
-		for (int i=0; (i< payload.length - RDTSegment.HDR_SIZE); i++)
+		
+		//set data length to the length the same as the one in the packet
+		seg.data = new byte[seg.length - RDTSegment.HDR_SIZE];
+		for (int i=0; (i< seg.length - RDTSegment.HDR_SIZE); i++)
 		{
 			seg.data[i] = payload[i + RDTSegment.HDR_SIZE];
 		}

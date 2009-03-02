@@ -17,7 +17,7 @@ public class Utility {
 			InetAddress ip, int port) {
 			
 		double d = RDT.random.nextDouble();
-		System.out.println(seg.flags);
+		//System.out.println(seg.flags);
 		if ( d < RDT.lossRate) { // simulate network loss
 			System.out.println(System.currentTimeMillis()+":udp_send: Lost Segment: seqNum=" + 
 					       seg.seqNum + "  ackNum=" + seg.ackNum + " flags=" + seg.flags + " ***");
@@ -26,6 +26,7 @@ public class Utility {
 	    }
 		// prepare UDP payload 
 		int payloadSize = seg.length;
+		//System.out.println("payload size = " + seg.length);
 		byte[] payload = new byte[payloadSize];
 		
 		seg.makePayload(payload);

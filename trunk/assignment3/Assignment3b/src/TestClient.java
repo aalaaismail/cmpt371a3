@@ -33,7 +33,9 @@ public class TestClient {
 	     RDT.setLossRate(0.4);
 	  
 	     byte[] buf = new byte[RDT.MSS];  //buffer set to MSS
-	     byte[] data = new byte[200]; //data
+	     byte[] data = new byte[10]; //data
+	     
+	     System.out.println("\n\n ======>CLIENT IS SENDING DATA<========\n\n " );
 	     for (int i=0; i<data.length; i++)
 	    	 data[i] = 0;
 	     rdt.send(data, data.length);
@@ -55,7 +57,7 @@ public class TestClient {
 	     rdt.send(data, data.length);
 	 
 	     
-	     System.out.println(System.currentTimeMillis() + ":Client has sent all data " );
+	     System.out.println(System.currentTimeMillis() + "\n\nCLIENT HAS SENT ALL DATA \n\n" );
 	     System.out.flush();
 	     
 	     rdt.receive(buf, RDT.MSS);
