@@ -570,6 +570,8 @@ class ReceiverThread extends Thread {
 					
 				}
 			}
+			else
+				System.out.println("CHECKSUM FAILURE");
 		}
 	}
 	

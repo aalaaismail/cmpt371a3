@@ -87,7 +87,7 @@ public class RDTSegment {
 			tempByte[i%4] = data[i];
 			
 			//if we just filled the last index then turn this into an integer and add it to the sum
-			if(i%tempByte.length == data.length - 1)
+			if(i%tempByte.length == 3) //data.length - 1)
 				sum += Utility.byteToInt(tempByte, tempSum);
 			i++;
 		}
@@ -97,6 +97,9 @@ public class RDTSegment {
 	public boolean isValid() 
 	{
 		//compute checksum
+		if (!(computeChecksum() - checksum == 0))
+			System.out.println("CHECKSUM = " + checksum + " COMPUTATION = " + computeChecksum());
+		
 		return (computeChecksum() - checksum == 0);
 	}
 	
