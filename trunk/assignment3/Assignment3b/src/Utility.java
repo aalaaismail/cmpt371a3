@@ -31,6 +31,7 @@ public class Utility {
 		
 		seg.makePayload(payload);
 	
+		//System.out.println("HEELELLEOEOEL");
 		// corrupt some bits
 		
 		// send over udp
@@ -38,6 +39,7 @@ public class Utility {
 		int delay = RDT.random.nextInt(MAX_NETWORK_DELAY);
 		try {
 			Thread.sleep(delay);
+		//	System.out.println(payload + " " + payloadSize + " " + ip + " " + port);
 			socket.send(new DatagramPacket(payload, payloadSize, ip, port));
 		} catch (Exception e) {
 			System.out.println("udp_send: " + e);
