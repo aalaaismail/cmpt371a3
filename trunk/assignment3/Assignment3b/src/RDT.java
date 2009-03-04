@@ -361,7 +361,15 @@ class RDTBuffer {
 	// for debugging
 	public void dump() {
 		System.out.println("Dumping the receiver buffer ...");
-		// Complete, if you want to 
+		// Complete, if you want to
+		for(int i = 0; i < size; i++)
+		{
+			if(buf[i] == null)
+				System.out.print("null ");
+			else
+				System.out.print(buf[i].seqNum + " ");
+		}
+		System.out.println();
 		
 	}
 } // end RDTBuffer class
@@ -503,6 +511,7 @@ class ReceiverThread extends Thread {
 				else
 				{
 					System.out.println("THERES DATA");
+					rcvBuf.dump(); // dump data for testing
 					//System.out.println("length = " + rcvseg.length);
 					//check if we already received this data
 					if(rcvBuf.checkSeqNum(rcvseg) && RDT.protocol == 1 || rcvBuf.checkSeqNum(rcvseg) && RDT.protocol == 2 && rcvseg.seqNum >= rcvBuf.base && rcvseg.seqNum < (rcvBuf.base + rcvBuf.size))

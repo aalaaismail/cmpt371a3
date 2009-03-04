@@ -57,6 +57,11 @@ public class RDTSegment {
 		//if the length is the header size then there is no data
 		return !(length == HDR_SIZE);
 	}
+	
+	public boolean containsFIN()
+	{
+		return (flags == 4);
+	}
 
 	public int computeChecksum() 
 	{
@@ -87,7 +92,7 @@ public class RDTSegment {
 			tempByte[i%4] = data[i];
 			
 			//if we just filled the last index then turn this into an integer and add it to the sum
-			if(i%tempByte.length == 3) //data.length - 1)
+			if(i%tempByte.length == 3 || i == data.length-1) //data.length - 1)
 				sum += Utility.byteToInt(tempByte, tempSum);
 			i++;
 		}
