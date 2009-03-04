@@ -260,7 +260,7 @@ class RDTBuffer {
 				base++;  //increase the base
 			semMutex.release();  //release the buffer			
 			semEmpty.release(); // increase #of empty slots
-			//System.out.println("Taking segment " + seg.seqNum + " outta buffer");
+			System.out.println("Taking segment " + seg.seqNum + " outta buffer");
 				
 		} 
 		catch(InterruptedException e) 
@@ -566,7 +566,7 @@ class ReceiverThread extends Thread {
 						Utility.udp_send(seg, socket, dst_ip, dst_port);
 					}
 					//always send ack if we in SR
-					else if (RDT.protocol == 2 && (rcvseg.seqNum < (rcvBuf.base + rcvBuf.size) || rcvseg.seqNum > (rcvBuf.base + rcvBuf.size)) )
+					else if (RDT.protocol == 2 && rcvseg.seqNum < (rcvBuf.base + rcvBuf.size) )
 					{
 						System.out.println("SENDING ACK 2");
 						// send ACK
