@@ -83,7 +83,8 @@ public class RDT {
 		
 		//set the receive buffer size
 		if (protocol == GBN)
-			rcvBuf = new RDTBuffer(1);
+			rcvBuf = new RDTBuffer(rcvBufSize);
+			//rcvBuf = new RDTBuffer(1);
 		else if (protocol == SR)
 			rcvBuf = new RDTBuffer(rcvBufSize);
 		
@@ -292,15 +293,16 @@ class RDTBuffer {
 			int i = 0;  //for index counting
 			if (seg.seqNum == base) //if the segment is the base we can move the window
 			{
-				System.out.println("Seg is equal to base");
+				//System.out.println("Seg is equal to base");
 				while(buf[(base+i)%size] != null && //if the segment is not null
 						i < size && //and we are not going over the size of the buffer
 						//and if the sequence number in the buffer is equal to base+i that means we received that data as well
 						buf[(base+i)%size].seqNum == (base+i)) 
 				{
 					System.out.println("RELEASING");
-					i++;  //increase the counter to move to the next buffer index
 					semFull.release(); // increase #of full slots.. so the application can grab more data
+					i++;
+					Thread.yield();
 				}
 			}
 			//release buffer mutex
