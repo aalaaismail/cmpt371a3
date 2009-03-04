@@ -29,11 +29,11 @@ public class TestClient {
 	     int dst_port = Integer.parseInt(args[1]);
 	     int local_port = Integer.parseInt(args[2]);
 	     	      
-	     RDT rdt = new RDT(hostname, dst_port, local_port, 3, 3, 2);
-	     RDT.setLossRate(0.4);
+	     RDT rdt = new RDT(hostname, dst_port, local_port, 5, 5, 2);
+	     RDT.setLossRate(0.3);
 	  
 	     byte[] buf = new byte[RDT.MSS];  //buffer set to MSS
-	     byte[] data = new byte[1234]; //data
+	     byte[] data = new byte[543]; //data
 	     
 	     System.out.println("\n\n ======>CLIENT IS SENDING DATA<========\n\n " );
 	     for (int i=0; i<data.length; i++)
