@@ -292,18 +292,22 @@ class RDTBuffer {
 			int i = 0;  //for index counting
 			if (seg.seqNum == base) //if the segment is the base we can move the window
 			{
+				System.out.println("Seg is equal to base");
 				while(buf[(base+i)%size] != null && //if the segment is not null
 						i < size && //and we are not going over the size of the buffer
 						//and if the sequence number in the buffer is equal to base+i that means we received that data as well
 						buf[(base+i)%size].seqNum == (base+i)) 
 				{
-					//System.out.println("RELEASING");
+					System.out.println("RELEASING");
 					i++;  //increase the counter to move to the next buffer index
 					semFull.release(); // increase #of full slots.. so the application can grab more data
 				}
 			}
 			//release buffer mutex
 			semMutex.release();
+			
+			System.out.println("Empty = " + semEmpty.availablePermits() + " Full = " 
+					+ semFull.availablePermits());
 			
 			//System.out.println("putseqNum success!");
 			}
@@ -512,7 +516,7 @@ class ReceiverThread extends Thread {
 				{
 					System.out.println("THERES DATA");
 					rcvBuf.dump(); // dump data for testing
-					System.out.println("BASE + SIZE = " + (rcvBuf.base + rcvBuf.size));
+					System.out.println("BASE = " + rcvBuf.base);
 					//System.out.println("length = " + rcvseg.length);
 					//check if we already received this data
 					if(rcvBuf.checkSeqNum(rcvseg) && RDT.protocol == 1 || rcvBuf.checkSeqNum(rcvseg) && RDT.protocol == 2 && rcvseg.seqNum >= rcvBuf.base && rcvseg.seqNum < (rcvBuf.base + rcvBuf.size))
