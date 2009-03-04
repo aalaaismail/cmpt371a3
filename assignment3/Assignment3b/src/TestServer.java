@@ -29,7 +29,7 @@ public class TestServer {
 	     	      
 	     RDT rdt = new RDT(hostname, dst_port, local_port, 5, 5, 2);
 	     RDT.setLossRate(0.2);
-	     byte[] buf = new byte[500];  	     
+	     byte[] buf = new byte[RDT.MSS];  	     
 	     System.out.println("\n\n ======>SERVER IS WAITING TO RECEIVE<========\n\n " );
 	
 	     

@@ -512,6 +512,7 @@ class ReceiverThread extends Thread {
 				{
 					System.out.println("THERES DATA");
 					rcvBuf.dump(); // dump data for testing
+					System.out.println("BASE + SIZE = " + (rcvBuf.base + rcvBuf.size));
 					//System.out.println("length = " + rcvseg.length);
 					//check if we already received this data
 					if(rcvBuf.checkSeqNum(rcvseg) && RDT.protocol == 1 || rcvBuf.checkSeqNum(rcvseg) && RDT.protocol == 2 && rcvseg.seqNum >= rcvBuf.base && rcvseg.seqNum < (rcvBuf.base + rcvBuf.size))
@@ -565,7 +566,7 @@ class ReceiverThread extends Thread {
 						Utility.udp_send(seg, socket, dst_ip, dst_port);
 					}
 					//always send ack if we in SR
-					else if (RDT.protocol == 2 && rcvseg.seqNum < (rcvBuf.base + rcvBuf.size) )
+					else if (RDT.protocol == 2 && (rcvseg.seqNum < (rcvBuf.base + rcvBuf.size) || rcvseg.seqNum > (rcvBuf.base + rcvBuf.size)) )
 					{
 						System.out.println("SENDING ACK 2");
 						// send ACK
