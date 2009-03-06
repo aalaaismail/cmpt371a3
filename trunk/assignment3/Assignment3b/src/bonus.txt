@@ -1,0 +1,14 @@
+Implemented graceful close
+- client sends a FIN segment when it has sent all its data
+- server responds with an ACK if it has received all the data up to this segment
+- server then sends its own FIN segment
+- client responds with an ACK and closes the connection
+- server then closes connection
+
+Test Cases
+- GBN no loss
+- SR no loss
+
+Graceful close doesn't work properly if loss rate is > 0
+- If an ACK for a FIN segment from the client side gets lost, the client closes regardless and the server perpetually resends the FIN.
+- This causes the server to endlessly resend the FIN segment
