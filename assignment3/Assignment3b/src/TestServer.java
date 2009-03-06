@@ -1,5 +1,5 @@
 /**
- * @author mohamed
+ * Long Tran lta1
  *
  */
 
@@ -27,19 +27,18 @@ public class TestServer {
 	     int dst_port = Integer.parseInt(args[1]);
 	     int local_port = Integer.parseInt(args[2]);
 	     	      
-	     RDT rdt = new RDT(hostname, dst_port, local_port, 5, 5, 1);
-	     RDT.setLossRate(0.2);
+	     RDT rdt = new RDT(hostname, dst_port, local_port, 5, 5);
+	     RDT.setLossRate(0.8);
 	     byte[] buf = new byte[RDT.MSS];  	     
 	     System.out.println("\n\n ======>SERVER IS WAITING TO RECEIVE<========\n\n " );
 	
-	     
 	     while (true) {
 	    	 int size = rdt.receive(buf, RDT.MSS);
+	    	 
 	    	 if(size == -1){
-	    		 System.out.println("SIZE = -1");
 	    		 break;
 	    	 }
-	    	// System.out.println("size is " + size);
+
 	    	 for (int i=0; i<size; i++)
 	    		 System.out.print(buf[i]);
 	    	 System.out.println(" ");

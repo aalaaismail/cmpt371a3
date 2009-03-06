@@ -1,5 +1,5 @@
 /**
- * @author mhefeeda
+ * Long Tran lta1
  *
  */
 
@@ -39,8 +39,6 @@ class TimeoutHandler extends TimerTask {
 				case RDT.GBN:
 					//resend the same packet since GBN's window size is one
 					Utility.udp_send(seg, socket, ip, port);
-					//Utility.udp_send(sndBuf.buf[sndBuf.base%sndBuf.size], socket, ip, port);
-					//sndBuf.next = sndBuf.base+1;
 					
 					break;
 				case RDT.SR:

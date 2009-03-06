@@ -1,6 +1,6 @@
 /**
  * 
- * @author mohamed
+ * Long Tran lta1
  *
  */
 
@@ -17,7 +17,7 @@ public class Utility {
 			InetAddress ip, int port) {
 			
 		double d = RDT.random.nextDouble();
-		//System.out.println(seg.flags);
+
 		if ( d < RDT.lossRate) { // simulate network loss
 			System.out.println(System.currentTimeMillis()+":udp_send: Lost Segment: seqNum=" + 
 					       seg.seqNum + "  ackNum=" + seg.ackNum + " flags=" + seg.flags + " ***");
@@ -26,12 +26,11 @@ public class Utility {
 	    }
 		// prepare UDP payload 
 		int payloadSize = seg.length;
-		//System.out.println("payload size = " + seg.length);
+
 		byte[] payload = new byte[payloadSize];
 		
 		seg.makePayload(payload);
-	
-		//System.out.println("HEELELLEOEOEL");
+
 		// corrupt some bits
 		
 		// send over udp
@@ -39,7 +38,7 @@ public class Utility {
 		int delay = RDT.random.nextInt(MAX_NETWORK_DELAY);
 		try {
 			Thread.sleep(delay);
-		//	System.out.println(payload + " " + payloadSize + " " + ip + " " + port);
+
 			socket.send(new DatagramPacket(payload, payloadSize, ip, port));
 		} catch (Exception e) {
 			System.out.println("udp_send: " + e);
@@ -49,7 +48,7 @@ public class Utility {
 					+ seg.seqNum + "  ackNum=" + seg.ackNum + "  flags=" + seg.flags
 					+ "   After delay= " + delay) ;
 		System.out.flush();
-		//seg.dump();
+
 	}
 	
 	/* NOTE: the following methods do NOT handle conversion from 
@@ -108,7 +107,7 @@ public class Utility {
 		} else
 			intTmp = 0x000000FF & ((int) data[idx]);
 		intValue |= intTmp;
-		//System.out.println(" byteToInt: " + intValue + "  " + intTmp);
+
 		return intValue;
 	}		
 }
