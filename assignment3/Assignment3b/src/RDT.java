@@ -20,6 +20,9 @@ public class RDT {
 	public static final int GBN = 1;   // Go back N protocol
 	public static final int SR = 2;    // Selective Repeat
 	public static int protocol = GBN;
+	public static int finished = -1;
+	public static int stat = 0;
+
 	
 	public static double lossRate = 0.0;
 	public static Random random = new Random(); 
@@ -173,6 +176,9 @@ public class RDT {
 		//set that variable to the next one to be removed
 		rdtSeg = rcvBuf.receiveNext();
 		
+		if(rdtSeg == null)
+			return -1;
+		
 		//set the buffer to the data
 		for (int i = 0; i < (rdtSeg.length - RDTSegment.HDR_SIZE); i++)
 			buf[i] = rdtSeg.data[i];
@@ -185,6 +191,30 @@ public class RDT {
 	public void close() {
 		// OPTIONAL: close the connection gracefully
 		// you can use TCP-style connection termination process
+		stat++;
+		System.out.println("Going to close connection");
+		// create a FIN segment
+		RDTSegment fin = new RDTSegment();
+		fin.seqNum = sndBuf.next;
+		fin.flags = 1;
+		fin.length = RDTSegment.HDR_SIZE;
+		fin.checksum = fin.computeChecksum();
+		finished = sndBuf.next;
+		sndBuf.putNext(fin);
+		Utility.udp_send(fin, socket, dst_ip, dst_port);
+		timer.schedule(new TimeoutHandler(sndBuf, fin, socket, dst_ip, dst_port), RTO, RTO);
+		
+		// do a little busy waiting until the receiver thread terminates
+		while(!String.valueOf(rcvThread.getState()).equals("TERMINATED"))
+		{
+			//System.out.println(String.valueOf(rcvThread.getState()));
+		}
+		
+		// just to make sure
+		System.out.println(String.valueOf(rcvThread.getState()));
+		
+		// close timer
+		timer.cancel();
 	}
 	
 }  // end RDT class 
@@ -256,9 +286,17 @@ class RDTBuffer {
 			semFull.acquire(); //drop a full slot
 			//to ensure only one thread is accessing the buffer at a time
 			semMutex.acquire(); // wait for mutex 
+
+			// stat will have incremented to 1 when server receives a FIN
+			// this will make it return null to break the loop in server
+			if(RDT.stat == 1)
+				return null;
+			
+			else{
 				seg = buf[base%size];	//take out the segment in the base slot
 				System.out.println("MOVING BASE");
 				base++;  //increase the base
+			}
 			semMutex.release();  //release the buffer			
 			semEmpty.release(); // increase #of empty slots
 			System.out.println("Taking segment " + seg.seqNum + " outta buffer");
@@ -387,6 +425,8 @@ class ReceiverThread extends Thread {
 	DatagramSocket socket;
 	InetAddress dst_ip;
 	int dst_port;
+	int finNum = 0;
+	boolean keepRun = true;
 	
 	ReceiverThread (RDTBuffer rcv_buf, RDTBuffer snd_buf, DatagramSocket s, 
 			InetAddress dst_ip_, int dst_port_) {
@@ -398,7 +438,7 @@ class ReceiverThread extends Thread {
 	}	
 	public void run() {
 		
-		while(true)
+		while(keepRun)
 		{
 			byte[] data = new byte[RDT.MSS+RDTSegment.HDR_SIZE];
 			
@@ -430,8 +470,26 @@ class ReceiverThread extends Thread {
 				if(rcvseg.containsAck())
 				{
 					System.out.println("ACK RECEIVED");
+					
+					
+					// if received ACK for FIN segment
+					if(rcvseg.ackNum == RDT.finished)
+					{
+						// stop timer for FIN
+						sndBuf.ackSegment(rcvseg.ackNum);
+						
+						// stat will have incremented to 2 for server side when it receives
+						// an ACK for its FIN meaning this is the second ACK so close server
+						if(RDT.stat == 2)
+						{
+							System.out.println("Terminating thread");
+							keepRun = false;
+						}
+					}
+
+					
 					// if GBN
-					if(RDT.protocol == 1)
+					else if(RDT.protocol == 1)
 					{
 						// if ackNum is >= than base it means it is a valid ack
 						if(rcvseg.ackNum >= sndBuf.base)
@@ -513,6 +571,38 @@ class ReceiverThread extends Thread {
 						}
 						sndBuf.dump();
 					}
+
+				}
+				
+				// if received a FIN segment and we have received everything up to this segment
+				else if(rcvseg.flags == 1 && rcvBuf.base == rcvseg.seqNum)
+				{
+					System.out.println("SENDING FIN ACK");
+					finNum = rcvseg.seqNum;
+					// send ACK
+					RDTSegment seg = new RDTSegment();
+					seg.ackNum = rcvseg.seqNum;
+					seg.flags = 16;
+					seg.length = RDTSegment.HDR_SIZE;
+					seg.checksum = seg.computeChecksum();
+					Utility.udp_send(seg, socket, dst_ip, dst_port);
+					
+					// increment stat counter
+					if(RDT.stat == 0)
+						RDT.stat = 1;
+					else if(RDT.stat == 1)
+						RDT.stat = 2;
+					
+					// release to let receive() run to break server loop
+					rcvBuf.semFull.release();
+					
+					// client will have stat incremented to 2 when it sends its ACK
+					// therefore after it sends close the client
+					if(RDT.stat == 2)
+					{
+						System.out.println("Terminating Thread");
+						keepRun = false;
+					}
 				}
 				
 				// not ACK means it contains data
@@ -573,6 +663,7 @@ class ReceiverThread extends Thread {
 						seg.checksum = seg.computeChecksum();
 						Utility.udp_send(seg, socket, dst_ip, dst_port);
 					}
+					
 					//always send ack if we in SR
 					else if (RDT.protocol == 2 && rcvseg.seqNum < (rcvBuf.base + rcvBuf.size) )
 					{
