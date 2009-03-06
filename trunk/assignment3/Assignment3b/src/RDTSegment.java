@@ -1,6 +1,6 @@
 /**
  * 
- * @author mohamed
+ * Long Tran lta1
  *
  */
 
@@ -101,10 +101,6 @@ public class RDTSegment {
 	}
 	public boolean isValid() 
 	{
-		//compute checksum
-		if (!(computeChecksum() - checksum == 0))
-			System.out.println("CHECKSUM = " + checksum + " COMPUTATION = " + computeChecksum());
-		
 		return (computeChecksum() - checksum == 0);
 	}
 	
