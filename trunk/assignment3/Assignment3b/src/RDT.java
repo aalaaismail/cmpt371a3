@@ -366,7 +366,7 @@ class RDTBuffer {
 	
 	// for debugging
 	public void dump() {
-		System.out.println("Dumping the receiver buffer ...");
+		System.out.println("Dumping the buffer ...");
 		// Complete, if you want to
 		for(int i = 0; i < size; i++)
 		{
@@ -464,8 +464,9 @@ class ReceiverThread extends Thread {
 					else
 					{
 						// check if received ack has already been received
-						if(sndBuf.buf[rcvseg.ackNum%sndBuf.size] == null ||
-								!sndBuf.buf[rcvseg.ackNum%sndBuf.size].ackReceived)
+						if(sndBuf.buf[rcvseg.ackNum%sndBuf.size] == null ||  //segment in the buffer isnt null
+								!sndBuf.buf[rcvseg.ackNum%sndBuf.size].ackReceived &&  //we havent received the ack for that segment yet
+								sndBuf.buf[rcvseg.ackNum%sndBuf.size].seqNum == rcvseg.ackNum)  //the segment's sequence number is the same as the ack number
 						{
 							System.out.println("PROCESSING ACK");
 							// set flag to show it has been received
@@ -478,8 +479,8 @@ class ReceiverThread extends Thread {
 								int i = 1;
 								try
 								{
-									sndBuf.semEmpty.release();
 									sndBuf.semFull.acquire();
+									sndBuf.semEmpty.release();
 								}
 								catch(InterruptedException e) 
 								{
@@ -493,8 +494,8 @@ class ReceiverThread extends Thread {
 									i++;  //to move to the next buffer slot
 									try
 									{
-										sndBuf.semEmpty.release();  //increase the number of empty slots
 										sndBuf.semFull.acquire();  //decrease the number of full slots
+										sndBuf.semEmpty.release();  //increase the number of empty slots
 									}
 									catch(InterruptedException e) 
 									{
@@ -510,6 +511,7 @@ class ReceiverThread extends Thread {
 
 
 						}
+						sndBuf.dump();
 					}
 				}
 				
